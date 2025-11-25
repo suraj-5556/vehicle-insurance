@@ -1,48 +1,42 @@
+from src.logger import logging
 import sys
-import logging
 
-def error_message_detail(error: Exception, error_detail: sys) -> str:
+def exception_ext (error: Exception , error_details: sys) -> str :
     """
-    Extracts detailed error information including file name, line number, and the error message.
-
-    :param error: The exception that occurred.
-    :param error_detail: The sys module to access traceback details.
-    :return: A formatted error message string.
+    this module takes exception and extract file name
+    and loc of error and return it by logging
     """
-    # Extract traceback details (exception information)
-    _, _, exc_tb = error_detail.exc_info()
+    _,_,er = error_details.exc_info()
 
-    # Get the file name where the exception occurred
-    file_name = exc_tb.tb_frame.f_code.co_filename
+    error_file = er.tb_frame.f_code.co_filename
+    line_no = er.tb_lineno
 
-    # Create a formatted error message string with file name, line number, and the actual error
-    line_number = exc_tb.tb_lineno
-    error_message = f"Error occurred in python script: [{file_name}] at line number [{line_number}]: {str(error)}"
+    error_meassage = f"error at file {error_file} on line {line_no} - massage {error}"
+    logging.error(error_meassage)
+
+    return error_meassage
+
+class myexception (Exception):
+    """
+    this class is inhertiated class of Exception class 
+    in python
+    this calls function and returns string of formatted msg
+    """
+    def __init__(self,error: Exception, error_details: sys):
+        """
+        this function accepts argument through object 
+        and call exception_ext function
+        """
+        self.error = error
+        self.error_details = error_details
+
+        self.exception = exception_ext(self.error,self.error_details)
+        super().__init__(self.exception)
     
-    # Log the error for better tracking
-    logging.error(error_message)
-    
-    return error_message
-
-class MyException(Exception):
-    """
-    Custom exception class for handling errors in the US visa application.
-    """
-    def __init__(self, error_message: str, error_detail: sys):
+    def __str__(self):
         """
-        Initializes the USvisaException with a detailed error message.
-
-        :param error_message: A string describing the error.
-        :param error_detail: The sys module to access traceback details.
+        Docstring for __str__
+        
+        :param self: Description
         """
-        # Call the base class constructor with the error message
-        super().__init__(error_message)
-
-        # Format the detailed error message using the error_message_detail function
-        self.error_message = error_message_detail(error_message, error_detail)
-
-    def __str__(self) -> str:
-        """
-        Returns the string representation of the error message.
-        """
-        return self.error_message
+        return self.exception
