@@ -1,6 +1,6 @@
-from src.exception import myexception
-import sys
-try:
-    x=1/0
-except Exception as e:
-    myexception(e,sys)
+from src.pipline.training_pipeline import TrainingPipeline
+
+obj = TrainingPipeline()
+obj.run_pipeline()
+# import os
+# print(os.getenv("mongoDB_url"))
