@@ -23,7 +23,11 @@ class mongoDB_connection:
                 connection_url = os.getenv(CONNECTION_URL)
                 if connection_url == None :
                     raise Exception("mongodb url is empty")
-                mongoDB_connection.clint = pymongo.MongoClient(connection_url,tlsCAFile=ca)
+                mongoDB_connection.clint = pymongo.MongoClient(connection_url,tlsCAFile=ca,
+                                                               serverSelectionTimeoutMS=10000,
+                                                               connectTimeoutMS=5000,
+                                                               socketTimeoutMS=30000,
+                                                               maxPoolSize=50)
 
             self.client = mongoDB_connection.clint
             self.database = self.client[database]
