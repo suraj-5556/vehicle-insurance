@@ -43,3 +43,11 @@ class proj1:
             return df
         except Exception as e:
             raise myexception(e,sys)
+        
+    def close_connection (self) -> None:
+        try:
+            if self.client and self.client.client:
+                self.client.client.close()
+                logging.info("mongo connection closed")
+        except Exception as e:
+            raise myexception(e,sys)

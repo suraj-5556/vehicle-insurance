@@ -25,7 +25,7 @@ def config_logger():
     file_handler = RotatingFileHandler(file_path, maxBytes=max_log_size, backupCount=backup)
     file_handler.setLevel(logging.INFO)
 
-    formatter = logging.Formatter("%(filename)s_%(lineno)d_%(message)s")
+    formatter = logging.Formatter("[ %(filename)s ]  [ %(lineno)d ]  [ %(message)s ]")
 
     console_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)

@@ -29,6 +29,7 @@ class dataIngestion:
         try:
             data = proj1()
             dataframe = data.collect_in_df(self.data_config.collection_name)
+            data.close_connection()
 
             logging.info("collected data in dataframe")
 

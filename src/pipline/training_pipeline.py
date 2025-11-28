@@ -3,16 +3,18 @@ import os
 from src.components.data_ingestion import dataIngestion
 from src.logger import logging
 from src.exception import myexception
-from src.entity.artifact_entity import DataIngestionArtifact , DataTransformationArtifact
-from src.entity.config_entity import DataIngestionConfig,DataValidationConfig,DataTransformationConfig
+from src.entity.artifact_entity import DataIngestionArtifact , DataTransformationArtifact,ModelTrainerArtifact
+from src.entity.config_entity import DataIngestionConfig,DataValidationConfig,DataTransformationConfig,ModelTrainerConfig
 from src.components.data_validation import DataValidation
 from src.components.data_transformation import DataTransformation
+from src.components.model_trainer import ModelTraining
 
 class TrainingPipeline :
     def __init__(self)->None:
         self.data_validation_config = DataValidationConfig()
         self.data_ingestion_config = DataIngestionConfig()
         self.data_transform_config = DataTransformationConfig()
+        self.model_training_config = ModelTrainerConfig()
         logging.info("training pipeline started")
     
     def start_ingestion (self) -> DataIngestionArtifact:
@@ -49,6 +51,19 @@ class TrainingPipeline :
             return transform_artifact
         except Exception as e:
             raise myexception(e,sys)
+        
+    def start_training (self , Data_transform_artifact :DataTransformationArtifact,
+                        model_training_config : ModelTrainerConfig) -> ModelTrainerArtifact:
+        try:
+            trainer = ModelTraining(Data_tranform_artifact=Data_transform_artifact , 
+                                    model_training_config=model_training_config)
+            artifact = trainer.start_training()
+
+            return artifact
+        except Exception as e:
+            raise myexception(e,sys)
+        
+
     def run_pipeline (self) ->None:
         try:   
             data_artifact = self.start_ingestion()
@@ -57,5 +72,7 @@ class TrainingPipeline :
             data_transform_artifact = self.start_transformation(data_artifact,
                                                                 data_val_artifact,
                                                                 self.data_transform_config)
+            model_training_artifact = self.start_training(Data_transform_artifact=data_transform_artifact,
+                                                          model_training_config= self.model_training_config)
         except Exception as e:
             raise myexception(e,sys)
