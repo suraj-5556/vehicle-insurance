@@ -7,6 +7,10 @@ from src.constants import DB_NAME,CONNECTION_URL
 from src.logger import logging
 from src.exception import myexception
 
+import logging as pylogging
+
+pylogging.getLogger("pymongo").setLevel(logging.WARNING)
+
 ca = certifi.where()
 
 class mongoDB_connection:

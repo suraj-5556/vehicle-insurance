@@ -3,11 +3,22 @@ import os
 from src.components.data_ingestion import dataIngestion
 from src.logger import logging
 from src.exception import myexception
-from src.entity.artifact_entity import DataIngestionArtifact , DataTransformationArtifact,ModelTrainerArtifact
-from src.entity.config_entity import DataIngestionConfig,DataValidationConfig,DataTransformationConfig,ModelTrainerConfig
+from src.entity.artifact_entity import (DataIngestionArtifact ,
+                                        DataTransformationArtifact,
+                                        ModelTrainerArtifact,
+                                        ModelEvaluationArtifact,
+                                        ModelPusherArtifact)
+from src.entity.config_entity import (DataIngestionConfig,
+                                      DataValidationConfig,
+                                      DataTransformationConfig,
+                                      ModelTrainerConfig,
+                                      ModelEvaluationConfig,
+                                      ModelPusherConfig)
 from src.components.data_validation import DataValidation
 from src.components.data_transformation import DataTransformation
 from src.components.model_trainer import ModelTraining
+from src.components.model_evaluation import ModelEvaluation
+from src.components.model_pusher import ModelPusher
 
 class TrainingPipeline :
     def __init__(self)->None:
@@ -15,6 +26,8 @@ class TrainingPipeline :
         self.data_ingestion_config = DataIngestionConfig()
         self.data_transform_config = DataTransformationConfig()
         self.model_training_config = ModelTrainerConfig()
+        self.model_eval_config = ModelEvaluationConfig()
+        self.model_pusher_config = ModelPusherConfig()
         logging.info("training pipeline started")
     
     def start_ingestion (self) -> DataIngestionArtifact:
@@ -62,7 +75,32 @@ class TrainingPipeline :
             return artifact
         except Exception as e:
             raise myexception(e,sys)
-        
+    def start_model_evaluation(self, data_transform_artifact: DataTransformationArtifact,
+                               model_trainer_artifact: ModelTrainerArtifact) -> ModelEvaluationArtifact:
+
+        try:
+            logging.info("entered model eval stage")
+            model_evaluation = ModelEvaluation(model_eval_config=self.model_eval_config,
+                                               data_transform_artifact=data_transform_artifact,
+                                               model_train_artifact=model_trainer_artifact)
+            model_evaluation_artifact = model_evaluation.start_eval()
+            logging.info("completed model evaluation")
+            return model_evaluation_artifact
+        except Exception as e:
+            raise myexception(e, sys)
+
+    def start_model_pusher(self, model_evaluation_artifact: ModelEvaluationArtifact) -> ModelPusherArtifact:
+
+        try:
+            logging.info("entered model pushing stage")
+            model_pusher = ModelPusher(model_eval_artifact=model_evaluation_artifact,
+                                       model_pusher_config=self.model_pusher_config
+                                       )
+            model_pusher_artifact = model_pusher.start_pusher()
+            logging.info("model push to aws successfully")
+            return model_pusher_artifact
+        except Exception as e:
+            raise myexception(e, sys)
 
     def run_pipeline (self) ->None:
         try:   
@@ -74,5 +112,12 @@ class TrainingPipeline :
                                                                 self.data_transform_config)
             model_training_artifact = self.start_training(Data_transform_artifact=data_transform_artifact,
                                                           model_training_config= self.model_training_config)
+            
+            model_evaluation_artifact = self.start_model_evaluation(data_transform_artifact=data_transform_artifact,
+                                                                    model_trainer_artifact=model_training_artifact)
+            if not model_evaluation_artifact.is_model_accepted:
+                logging.info(f"Model not accepted.")
+                return None
+            model_pusher_artifact = self.start_model_pusher(model_evaluation_artifact=model_evaluation_artifact)
         except Exception as e:
             raise myexception(e,sys)
