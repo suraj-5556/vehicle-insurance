@@ -3,33 +3,33 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from starlette.responses import HTMLResponse, RedirectResponse
+from starlette.responses import HTMLResponse, RedirectResponse, JSONResponse
 from uvicorn import run as app_run
 import asyncio
 import logging
 from typing import Optional
 from queue import Queue
 import threading
+import json
 
 # Importing constants and pipeline modules from the project
 from src.constants import APP_HOST, APP_PORT
 from src.pipline.prediction_pipeline import VehicleData, VehicleDataClassifier
 from src.pipline.training_pipeline import TrainingPipeline
-from src.logger import logging as custom_logger  # Your custom logger module
+from src.logger import logging as custom_logger
 
 # Initialize FastAPI application
 app = FastAPI()
 
-# Mount the 'static' directory for serving static files (like CSS)
+# Mount the 'static' directory for serving static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Set up Jinja2 template engine for rendering HTML templates
+# Set up Jinja2 template engine
 templates = Jinja2Templates(directory='templates')
 
-# Allow all origins for Cross-Origin Resource Sharing (CORS)
+# CORS configuration
 origins = ["*"]
 
-# Configure middleware to handle CORS, allowing requests from any origin
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -56,7 +56,6 @@ class QueueHandler(logging.Handler):
 class DataForm:
     """
     DataForm class to handle and process incoming form data.
-    This class defines the vehicle-related attributes expected from the form.
     """
     def __init__(self, request: Request):
         self.request: Request = request
@@ -75,51 +74,47 @@ class DataForm:
     async def get_vehicle_data(self):
         """
         Method to retrieve and assign form data to class attributes.
-        This method is asynchronous to handle form data fetching without blocking.
         """
         form = await self.request.form()
-        self.Gender = form.get("Gender")
-        self.Age = form.get("Age")
-        self.Driving_License = form.get("Driving_License")
-        self.Region_Code = form.get("Region_Code")
-        self.Previously_Insured = form.get("Previously_Insured")
-        self.Annual_Premium = form.get("Annual_Premium")
-        self.Policy_Sales_Channel = form.get("Policy_Sales_Channel")
-        self.Vintage = form.get("Vintage")
-        self.Vehicle_Age_lt_1_Year = form.get("Vehicle_Age_lt_1_Year")
-        self.Vehicle_Age_gt_2_Years = form.get("Vehicle_Age_gt_2_Years")
-        self.Vehicle_Damage_Yes = form.get("Vehicle_Damage_Yes")
+        self.Gender = int(form.get("Gender"))
+        self.Age = int(form.get("Age"))
+        self.Driving_License = int(form.get("Driving_License"))
+        self.Region_Code = float(form.get("Region_Code"))
+        self.Previously_Insured = int(form.get("Previously_Insured"))
+        self.Annual_Premium = float(form.get("Annual_Premium"))
+        self.Policy_Sales_Channel = float(form.get("Policy_Sales_Channel"))
+        self.Vintage = int(form.get("Vintage"))
+        self.Vehicle_Age_lt_1_Year = int(form.get("Vehicle_Age_lt_1_Year"))
+        self.Vehicle_Age_gt_2_Years = int(form.get("Vehicle_Age_gt_2_Years"))
+        self.Vehicle_Damage_Yes = int(form.get("Vehicle_Damage_Yes"))
 
 
-# Route to render the main page with the form
+# Route to render the main page
 @app.get("/", tags=["authentication"])
 async def index(request: Request):
     """
-    Renders the main HTML form page for vehicle data input.
+    Renders the main HTML form page for vehicle insurance prediction.
     """
     return templates.TemplateResponse(
-            "vehicledata.html",{"request": request, "context": "Rendering"})
+            "vehicledata.html",{"request": request})
 
 
-# SSE endpoint for training with real-time logs from custom logger
+# SSE endpoint for training with real-time logs
 @app.get("/train-stream")
 async def train_stream():
     """
     Endpoint to stream training logs in real-time using Server-Sent Events.
-    Integrates with your custom src.logger.logging module.
     """
     async def event_generator():
         log_queue = Queue()
         queue_handler = QueueHandler(log_queue)
         
-        # Set formatter for the queue handler
         formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+            '%(asctime)s - %(levelname)s - %(message)s',
+            datefmt='%H:%M:%S'
         )
         queue_handler.setFormatter(formatter)
         
-        # Get the root logger (or your specific logger if you have a named one)
         logger = logging.getLogger()
         original_level = logger.level
         logger.setLevel(logging.INFO)
@@ -129,7 +124,6 @@ async def train_stream():
             yield f"data: 🚀 Initializing training pipeline...\n\n"
             await asyncio.sleep(0.1)
             
-            # Run training in a separate thread to avoid blocking
             def run_training():
                 try:
                     train_pipeline = TrainingPipeline()
@@ -142,7 +136,6 @@ async def train_stream():
             training_thread = threading.Thread(target=run_training)
             training_thread.start()
             
-            # Stream logs from the queue
             while True:
                 if not log_queue.empty():
                     log_message = log_queue.get()
@@ -152,20 +145,16 @@ async def train_stream():
                         yield f"data: DONE\n\n"
                         break
                     
-                    # Format the message for frontend
                     yield f"data: {log_message}\n\n"
                 else:
-                    # Small delay to prevent busy waiting
                     await asyncio.sleep(0.1)
             
-            # Wait for training thread to complete
             training_thread.join(timeout=1)
             
         except Exception as e:
             yield f"data: ❌ ERROR: {str(e)}\n\n"
             yield f"data: DONE\n\n"
         finally:
-            # Clean up: remove the queue handler
             logger.removeHandler(queue_handler)
             logger.setLevel(original_level)
     
@@ -179,66 +168,120 @@ async def train_stream():
     )
 
 
-# Route to trigger the model training process (fallback)
-@app.get("/train")
-async def trainRouteClient():
+# SSE endpoint for prediction with real-time logs
+@app.get("/predict-stream")
+async def predict_stream(
+    Gender: int,
+    Age: int,
+    Driving_License: int,
+    Region_Code: float,
+    Previously_Insured: int,
+    Annual_Premium: float,
+    Policy_Sales_Channel: float,
+    Vintage: int,
+    Vehicle_Age_lt_1_Year: int,
+    Vehicle_Age_gt_2_Years: int,
+    Vehicle_Damage_Yes: int
+):
     """
-    Endpoint to initiate the model training pipeline (fallback).
+    Endpoint to stream prediction logs in real-time using Server-Sent Events.
     """
-    try:
-        train_pipeline = TrainingPipeline()
-        train_pipeline.run_pipeline()
-        return Response("Training successful!!!")
-    except Exception as e:
-        return Response(f"Error Occurred! {e}")
-
-
-# Route to handle form submission and make predictions
-@app.post("/")
-async def predictRouteClient(request: Request):
-    """
-    Endpoint to receive form data, process it, and make a prediction.
-    """
-    try:
-        form = DataForm(request)
-        await form.get_vehicle_data()
+    async def event_generator():
+        log_queue = Queue()
+        queue_handler = QueueHandler(log_queue)
         
-        vehicle_data = VehicleData(
-                                Gender= form.Gender,
-                                Age = form.Age,
-                                Driving_License = form.Driving_License,
-                                Region_Code = form.Region_Code,
-                                Previously_Insured = form.Previously_Insured,
-                                Annual_Premium = form.Annual_Premium,
-                                Policy_Sales_Channel = form.Policy_Sales_Channel,
-                                Vintage = form.Vintage,
-                                Vehicle_Age_lt_1_Year = form.Vehicle_Age_lt_1_Year,
-                                Vehicle_Age_gt_2_Years = form.Vehicle_Age_gt_2_Years,
-                                Vehicle_Damage_Yes = form.Vehicle_Damage_Yes
-                                )
-
-        # Convert form data into a DataFrame for the model
-        vehicle_df = vehicle_data.get_vehicle_input_data_frame()
-
-        # Initialize the prediction pipeline
-        model_predictor = VehicleDataClassifier()
-
-        # Make a prediction and retrieve the result
-        value = model_predictor.predict(dataframe=vehicle_df)[0]
-
-        # Interpret the prediction result as 'Response-Yes' or 'Response-No'
-        status = "Response-Yes" if value == 1 else "Response-No"
-
-        # Render the same HTML page with the prediction result
-        return templates.TemplateResponse(
-            "vehicledata.html",
-            {"request": request, "context": status},
+        formatter = logging.Formatter(
+            '%(asctime)s - %(levelname)s - %(message)s',
+            datefmt='%H:%M:%S'
         )
+        queue_handler.setFormatter(formatter)
         
-    except Exception as e:
-        return {"status": False, "error": f"{e}"}
+        logger = logging.getLogger()
+        original_level = logger.level
+        logger.setLevel(logging.INFO)
+        logger.addHandler(queue_handler)
+        
+        try:
+            yield f"data: 🔍 Starting prediction process...\n\n"
+            await asyncio.sleep(0.1)
+            
+            result = {"status": False, "prediction": None, "risk_level": None}
+            
+            def run_prediction():
+                try:
+                    vehicle_data = VehicleData(
+                        Gender=Gender,
+                        Age=Age,
+                        Driving_License=Driving_License,
+                        Region_Code=Region_Code,
+                        Previously_Insured=Previously_Insured,
+                        Annual_Premium=Annual_Premium,
+                        Policy_Sales_Channel=Policy_Sales_Channel,
+                        Vintage=Vintage,
+                        Vehicle_Age_lt_1_Year=Vehicle_Age_lt_1_Year,
+                        Vehicle_Age_gt_2_Years=Vehicle_Age_gt_2_Years,
+                        Vehicle_Damage_Yes=Vehicle_Damage_Yes
+                    )
+                    
+                    vehicle_df = vehicle_data.get_vehicle_input_data_frame()
+                    model_predictor = VehicleDataClassifier()
+                    value = model_predictor.predict(dataframe=vehicle_df)[0]
+                    
+                    result["status"] = True
+                    result["prediction"] = int(value)
+                    
+                    # Determine risk level based on features
+                    if value == 1:
+                        if Previously_Insured == 0 and Vehicle_Damage_Yes == 1:
+                            result["risk_level"] = "High"
+                        elif Vehicle_Damage_Yes == 1:
+                            result["risk_level"] = "Medium"
+                        else:
+                            result["risk_level"] = "Low"
+                    else:
+                        result["risk_level"] = "Low"
+                    
+                    log_queue.put("PREDICTION_COMPLETE")
+                except Exception as e:
+                    log_queue.put(f"ERROR: {str(e)}")
+                    log_queue.put("PREDICTION_COMPLETE")
+            
+            prediction_thread = threading.Thread(target=run_prediction)
+            prediction_thread.start()
+            
+            while True:
+                if not log_queue.empty():
+                    log_message = log_queue.get()
+                    
+                    if log_message == "PREDICTION_COMPLETE":
+                        yield f"data: ✓ Prediction completed successfully!\n\n"
+                        yield f"data: RESULT:{json.dumps(result)}\n\n"
+                        yield f"data: DONE\n\n"
+                        break
+                    
+                    yield f"data: {log_message}\n\n"
+                else:
+                    await asyncio.sleep(0.1)
+            
+            prediction_thread.join(timeout=1)
+            
+        except Exception as e:
+            yield f"data: ❌ ERROR: {str(e)}\n\n"
+            yield f"data: DONE\n\n"
+        finally:
+            logger.removeHandler(queue_handler)
+            logger.setLevel(original_level)
+    
+    return StreamingResponse(
+        event_generator(), 
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
+    )
 
 
-# Main entry point to start the FastAPI server
+# Main entry point
 if __name__ == "__main__":
     app_run(app)

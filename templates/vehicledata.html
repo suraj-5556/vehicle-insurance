@@ -3,213 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vehicle Insurance Prediction</title>
+    <title>InsureMax Analytics</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Vehicle Insurance Prediction</h1>
-            <p class="subtitle">ML-powered insurance response prediction</p>
+    <div class="header">
+        <div class="logo">
+            <i class="fas fa-car"></i>
+            <span class="brand"><strong>InsureMax</strong> <span class="analytics">Analytics</span></span>
         </div>
-
-        <form method="post" action="/" id="predictionForm">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="Gender">Gender</label>
-                    <select id="Gender" name="Gender" required>
-                        <option value="">Select</option>
-                        <option value="1">Male</option>
-                        <option value="0">Female</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="Age">Age</label>
-                    <input type="number" id="Age" name="Age" placeholder="25" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="Driving_License">Driving License</label>
-                    <select id="Driving_License" name="Driving_License" required>
-                        <option value="">Select</option>
-                        <option value="1">Yes</option>
-                        <option value="0">No</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="Region_Code">Region Code</label>
-                    <input type="number" step="0.01" id="Region_Code" name="Region_Code" placeholder="28.0" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="Previously_Insured">Previously Insured</label>
-                    <select id="Previously_Insured" name="Previously_Insured" required>
-                        <option value="">Select</option>
-                        <option value="1">Yes</option>
-                        <option value="0">No</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="Annual_Premium">Annual Premium</label>
-                    <input type="number" step="0.01" id="Annual_Premium" name="Annual_Premium" placeholder="40000" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="Policy_Sales_Channel">Policy Sales Channel</label>
-                    <input type="number" step="0.01" id="Policy_Sales_Channel" name="Policy_Sales_Channel" placeholder="152.0" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="Vintage">Vintage (Days)</label>
-                    <input type="number" id="Vintage" name="Vintage" placeholder="200" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="Vehicle_Age_lt_1_Year">Vehicle Age < 1 Year</label>
-                    <select id="Vehicle_Age_lt_1_Year" name="Vehicle_Age_lt_1_Year" required>
-                        <option value="">Select</option>
-                        <option value="1">Yes</option>
-                        <option value="0">No</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="Vehicle_Age_gt_2_Years">Vehicle Age > 2 Years</label>
-                    <select id="Vehicle_Age_gt_2_Years" name="Vehicle_Age_gt_2_Years" required>
-                        <option value="">Select</option>
-                        <option value="1">Yes</option>
-                        <option value="0">No</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="Vehicle_Damage_Yes">Vehicle Damage</label>
-                    <select id="Vehicle_Damage_Yes" name="Vehicle_Damage_Yes" required>
-                        <option value="">Select</option>
-                        <option value="1">Yes</option>
-                        <option value="0">No</option>
-                    </select>
-                </div>
-            </div>
-
-            <button type="submit" class="btn btn-primary">
-                <span>Predict Response</span>
-            </button>
-        </form>
-
-        <button type="button" class="btn btn-secondary" id="trainButton">
-            <span>Train Model</span>
-        </button>
-
-        {% if context and context != "Rendering" %}
-            <div class="result-card {% if context == 'Response-Yes' %}success{% else %}info{% endif %}">
-                <h3>Prediction Result</h3>
-                <p class="result-value">{{ context }}</p>
-            </div>
-        {% endif %}
     </div>
 
-    <!-- Training Modal -->
-    <div id="trainingModal" class="modal">
+    <div class="main-container">
+        <h1 class="page-title">Estimate Your Premium</h1>
+        
+        <div class="content-grid">
+            <!-- Left Panel: Input Form -->
+            <div class="card">
+                <h2 class="card-title">Input Customer & Vehicle Data</h2>
+                
+                <form id="predictionForm">
+                    <!-- Gender -->
+                    <div class="form-group">
+                        <label>
+                            Gender:
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltip-text">Select customer's gender (Male/Female)</span>
+                            </span>
+                        </label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="Gender" value="1" checked>
+                                <span>Male</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="Gender" value="0">
+                                <span>Female</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Age -->
+                    <div class="form-group">
+                        <label for="Age">
+                            Age
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltip-text">Customer's age in years (e.g., 25, 42, 65)</span>
+                            </span>
+                        </label>
+                        <input type="number" id="Age" name="Age" placeholder="Enter age (e.g., 30)" min="18" max="100" required>
+                    </div>
+
+                    <!-- Driving License -->
+                    <div class="form-group">
+                        <label for="Driving_License">
+                            Driving License
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltip-text">Does customer have a valid driving license?</span>
+                            </span>
+                        </label>
+                        <select id="Driving_License" name="Driving_License" required>
+                            <option value="">Select option</option>
+                            <option value="1">Yes</option>
+                            <option value="0">No</option>
+                        </select>
+                    </div>
+
+                    <!-- Region Code -->
+                    <div class="form-group">
+                        <label for="Region_Code">
+                            Region Code
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltip-text">Geographic region code (e.g., Mumbai: 28, Delhi: 11, Pune: 3, Bangalore: 8)</span>
+                            </span>
+                        </label>
+                        <input type="number" id="Region_Code" name="Region_Code" placeholder="Enter region code (e.g., 28)" step="0.01" required>
+                    </div>
+
+                    <!-- Previously Insured -->
+                    <div class="form-group">
+                        <label for="Previously_Insured">
+                            Previously Insured
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltip-text">Does customer already have vehicle insurance?</span>
+                            </span>
+                        </label>
+                        <select id="Previously_Insured" name="Previously_Insured" required>
+                            <option value="">Select option</option>
+                            <option value="1">Yes</option>
+                            <option value="0">No</option>
+                        </select>
+                    </div>
+
+                    <!-- Annual Premium -->
+                    <div class="form-group">
+                        <label for="Annual_Premium">
+                            Annual Premium (Last Policy)
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltip-text">Amount paid for previous insurance (e.g., ₹40000, ₹25000)</span>
+                            </span>
+                        </label>
+                        <div class="input-with-currency">
+                            <span class="currency">₹</span>
+                            <input type="number" id="Annual_Premium" name="Annual_Premium" placeholder="Enter amount" step="0.01" min="0" required>
+                        </div>
+                    </div>
+
+                    <!-- Policy Sales Channel -->
+                    <div class="form-group">
+                        <label for="Policy_Sales_Channel">
+                            Policy Sales Channel
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltip-text">Sales channel code (e.g., Agent: 152, Online: 26, Bank: 11)</span>
+                            </span>
+                        </label>
+                        <input type="number" id="Policy_Sales_Channel" name="Policy_Sales_Channel" placeholder="Enter channel code (e.g., 152)" step="0.01" required>
+                    </div>
+
+                    <!-- Vintage -->
+                    <div class="form-group">
+                        <label for="Vintage">
+                            Vintage (Days)
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltip-text">Days since customer associated with company (e.g., 200, 365)</span>
+                            </span>
+                        </label>
+                        <input type="number" id="Vintage" name="Vintage" placeholder="Enter days (e.g., 200)" min="0" required>
+                    </div>
+
+                    <!-- Vehicle Age -->
+                    <div class="form-group">
+                        <label for="Vehicle_Age">
+                            Vehicle Age
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltip-text">Age category of the vehicle</span>
+                            </span>
+                        </label>
+                        <select id="Vehicle_Age" name="Vehicle_Age" required>
+                            <option value="">Select option</option>
+                            <option value="lt_1">Less than 1 Year</option>
+                            <option value="1-2">1-2 Years</option>
+                            <option value="gt_2">Greater than 2 Years</option>
+                        </select>
+                    </div>
+
+                    <!-- Vehicle Damage -->
+                    <div class="form-group">
+                        <label for="Vehicle_Damage_Yes">
+                            Vehicle Damage
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltip-text">Has the vehicle been damaged in the past?</span>
+                            </span>
+                        </label>
+                        <select id="Vehicle_Damage_Yes" name="Vehicle_Damage_Yes" required>
+                            <option value="">Select option</option>
+                            <option value="1">Yes</option>
+                            <option value="0">No</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right Panel: Actions and Output -->
+            <div class="right-panel">
+                <!-- Model Actions Card -->
+                <div class="card actions-card">
+                    <h2 class="card-title">Model Actions</h2>
+                    <button type="button" class="btn btn-primary" id="predictBtn">
+                        <i class="fas fa-chart-line"></i>
+                        PREDICT RESPONSE
+                    </button>
+                    <button type="button" class="btn btn-success" id="trainBtn">
+                        <i class="fas fa-brain"></i>
+                        TRAIN MODEL
+                    </button>
+                </div>
+
+                <!-- Prediction Output Card -->
+                <div class="card output-card">
+                    <h2 class="card-title">Prediction Output:</h2>
+                    <div class="output-content" id="outputContent">
+                        <p class="output-placeholder">
+                            <i class="fas fa-info-circle"></i> Click "PREDICT RESPONSE" to see results
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-date">
+            <i class="fas fa-calendar-alt"></i>
+            <script>document.write(new Date().toISOString().split('T')[0])</script>
+        </div>
+    </div>
+
+    <!-- Log Modal -->
+    <div id="logModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Training Pipeline</h2>
+                <h2 id="modalTitle">Process Logs</h2>
                 <button class="close-btn" id="closeModal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="log-container" id="logContainer">
-                    <div class="log-message">Click "Start Training" to begin...</div>
+                    <div class="log-message">Waiting to start...</div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" id="startTraining">Start Training</button>
                 <button class="btn btn-secondary" id="closeModalBtn">Close</button>
             </div>
         </div>
     </div>
 
-    <script>
-        const modal = document.getElementById('trainingModal');
-        const trainButton = document.getElementById('trainButton');
-        const closeModal = document.getElementById('closeModal');
-        const closeModalBtn = document.getElementById('closeModalBtn');
-        const startTraining = document.getElementById('startTraining');
-        const logContainer = document.getElementById('logContainer');
-
-        // Open modal
-        trainButton.addEventListener('click', () => {
-            modal.style.display = 'flex';
-        });
-
-        // Close modal
-        closeModal.addEventListener('click', () => {
-            modal.style.display = 'none';
-        });
-
-        closeModalBtn.addEventListener('click', () => {
-            modal.style.display = 'none';
-        });
-
-        // Close modal on outside click
-        window.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-
-        // Start training with SSE
-        startTraining.addEventListener('click', async () => {
-            logContainer.innerHTML = '<div class="log-message">Connecting to training pipeline...</div>';
-            startTraining.disabled = true;
-            startTraining.innerHTML = '<span>Training...</span>';
-
-            const eventSource = new EventSource('/train-stream');
-
-            eventSource.onmessage = (event) => {
-                const message = event.data;
-                
-                if (message === 'DONE') {
-                    eventSource.close();
-                    startTraining.disabled = false;
-                    startTraining.innerHTML = '<span>Start Training</span>';
-                    
-                    const doneMsg = document.createElement('div');
-                    doneMsg.className = 'log-message success';
-                    doneMsg.textContent = '✓ Training pipeline completed';
-                    logContainer.appendChild(doneMsg);
-                    logContainer.scrollTop = logContainer.scrollHeight;
-                    return;
-                }
-
-                const logMsg = document.createElement('div');
-                logMsg.className = 'log-message';
-                
-                if (message.includes('ERROR')) {
-                    logMsg.classList.add('error');
-                } else if (message.includes('success') || message.includes('completed')) {
-                    logMsg.classList.add('success');
-                }
-                
-                logMsg.textContent = message;
-                logContainer.appendChild(logMsg);
-                logContainer.scrollTop = logContainer.scrollHeight;
-            };
-
-            eventSource.onerror = (error) => {
-                console.error('SSE Error:', error);
-                eventSource.close();
-                startTraining.disabled = false;
-                startTraining.innerHTML = '<span>Start Training</span>';
-                
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'log-message error';
-                errorMsg.textContent = '✗ Connection error. Please try again.';
-                logContainer.appendChild(errorMsg);
-            };
-        });
-    </script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>
