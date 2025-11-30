@@ -116,7 +116,9 @@ class TrainingPipeline :
             model_evaluation_artifact = self.start_model_evaluation(data_transform_artifact=data_transform_artifact,
                                                                     model_trainer_artifact=model_training_artifact)
             if not model_evaluation_artifact.is_model_accepted:
-                logging.info(f"Model not accepted. {model_evaluation_artifact}")
+                logging.info("Model not accepted.")
+                logging.info("aws model is better than trained model")
+                logging.info(f"{model_evaluation_artifact}")
                 return None
             model_pusher_artifact = self.start_model_pusher(model_evaluation_artifact=model_evaluation_artifact)
         except Exception as e:

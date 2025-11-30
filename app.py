@@ -1,17 +1,21 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.responses import HTMLResponse, RedirectResponse
 from uvicorn import run as app_run
-
+import asyncio
+import logging
 from typing import Optional
+from queue import Queue
+import threading
 
 # Importing constants and pipeline modules from the project
 from src.constants import APP_HOST, APP_PORT
 from src.pipline.prediction_pipeline import VehicleData, VehicleDataClassifier
 from src.pipline.training_pipeline import TrainingPipeline
+from src.logger import logging as custom_logger  # Your custom logger module
 
 # Initialize FastAPI application
 app = FastAPI()
@@ -34,6 +38,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+class QueueHandler(logging.Handler):
+    """
+    Custom logging handler that puts log records into a queue.
+    This allows real-time log streaming to the frontend.
+    """
+    def __init__(self, log_queue):
+        super().__init__()
+        self.log_queue = log_queue
+
+    def emit(self, record):
+        log_entry = self.format(record)
+        self.log_queue.put(log_entry)
+
+
 class DataForm:
     """
     DataForm class to handle and process incoming form data.
@@ -53,7 +72,6 @@ class DataForm:
         self.Vehicle_Age_gt_2_Years: Optional[int] = None
         self.Vehicle_Damage_Yes: Optional[int] = None
                 
-
     async def get_vehicle_data(self):
         """
         Method to retrieve and assign form data to class attributes.
@@ -72,6 +90,7 @@ class DataForm:
         self.Vehicle_Age_gt_2_Years = form.get("Vehicle_Age_gt_2_Years")
         self.Vehicle_Damage_Yes = form.get("Vehicle_Damage_Yes")
 
+
 # Route to render the main page with the form
 @app.get("/", tags=["authentication"])
 async def index(request: Request):
@@ -81,19 +100,98 @@ async def index(request: Request):
     return templates.TemplateResponse(
             "vehicledata.html",{"request": request, "context": "Rendering"})
 
-# Route to trigger the model training process
+
+# SSE endpoint for training with real-time logs from custom logger
+@app.get("/train-stream")
+async def train_stream():
+    """
+    Endpoint to stream training logs in real-time using Server-Sent Events.
+    Integrates with your custom src.logger.logging module.
+    """
+    async def event_generator():
+        log_queue = Queue()
+        queue_handler = QueueHandler(log_queue)
+        
+        # Set formatter for the queue handler
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+        queue_handler.setFormatter(formatter)
+        
+        # Get the root logger (or your specific logger if you have a named one)
+        logger = logging.getLogger()
+        original_level = logger.level
+        logger.setLevel(logging.INFO)
+        logger.addHandler(queue_handler)
+        
+        try:
+            yield f"data: 🚀 Initializing training pipeline...\n\n"
+            await asyncio.sleep(0.1)
+            
+            # Run training in a separate thread to avoid blocking
+            def run_training():
+                try:
+                    train_pipeline = TrainingPipeline()
+                    train_pipeline.run_pipeline()
+                    log_queue.put("TRAINING_COMPLETE")
+                except Exception as e:
+                    log_queue.put(f"ERROR: {str(e)}")
+                    log_queue.put("TRAINING_COMPLETE")
+            
+            training_thread = threading.Thread(target=run_training)
+            training_thread.start()
+            
+            # Stream logs from the queue
+            while True:
+                if not log_queue.empty():
+                    log_message = log_queue.get()
+                    
+                    if log_message == "TRAINING_COMPLETE":
+                        yield f"data: ✓ Training pipeline completed successfully!\n\n"
+                        yield f"data: DONE\n\n"
+                        break
+                    
+                    # Format the message for frontend
+                    yield f"data: {log_message}\n\n"
+                else:
+                    # Small delay to prevent busy waiting
+                    await asyncio.sleep(0.1)
+            
+            # Wait for training thread to complete
+            training_thread.join(timeout=1)
+            
+        except Exception as e:
+            yield f"data: ❌ ERROR: {str(e)}\n\n"
+            yield f"data: DONE\n\n"
+        finally:
+            # Clean up: remove the queue handler
+            logger.removeHandler(queue_handler)
+            logger.setLevel(original_level)
+    
+    return StreamingResponse(
+        event_generator(), 
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
+    )
+
+
+# Route to trigger the model training process (fallback)
 @app.get("/train")
 async def trainRouteClient():
     """
-    Endpoint to initiate the model training pipeline.
+    Endpoint to initiate the model training pipeline (fallback).
     """
     try:
         train_pipeline = TrainingPipeline()
         train_pipeline.run_pipeline()
         return Response("Training successful!!!")
-
     except Exception as e:
         return Response(f"Error Occurred! {e}")
+
 
 # Route to handle form submission and make predictions
 @app.post("/")
@@ -140,7 +238,7 @@ async def predictRouteClient(request: Request):
     except Exception as e:
         return {"status": False, "error": f"{e}"}
 
+
 # Main entry point to start the FastAPI server
 if __name__ == "__main__":
-    # app_run(app, host=APP_HOST, port=APP_PORT)
     app_run(app)
