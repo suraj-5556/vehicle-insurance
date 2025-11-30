@@ -53,7 +53,7 @@ class Proj1Estimator:
             raise myexception(e, sys)
 
 
-    def predict(self,array:np.array):
+    def predict(self,dataframe: DataFrame):
         """
         :param dataframe:
         :return:
@@ -61,6 +61,17 @@ class Proj1Estimator:
         try:
             if self.loaded_model is None:
                 self.loaded_model = self.load_model()
-            return self.loaded_model.prediction(array)
+            return self.loaded_model.prediction(dataframe=dataframe)
+        except Exception as e:
+            raise myexception(e, sys)
+    def predict_with_array(self,array: np.array):
+        """
+        :param dataframe:
+        :return:
+        """
+        try:
+            if self.loaded_model is None:
+                self.loaded_model = self.load_model()
+            return self.loaded_model.prediction_with_array(array=array)
         except Exception as e:
             raise myexception(e, sys)

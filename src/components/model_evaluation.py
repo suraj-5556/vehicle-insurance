@@ -8,7 +8,7 @@ from src.entity.artifact_entity import (ModelPusherArtifact,ModelEvaluationArtif
                                         EvaluateModelResponse,DataTransformationArtifact)
 from src.logger import logging
 from src.exception import myexception
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score,accuracy_score
 from src.utils.main_utils import load_object,load_numpy_array_data
 from src.entity.s3_estimator import Proj1Estimator
 
@@ -48,8 +48,9 @@ class ModelEvaluation :
             proj1_obj = self.get_aws_model()
 
             if proj1_obj != None:
-                y_pred = proj1_obj.predict(array=x)
+                y_pred = proj1_obj.predict_with_array(array=x)
                 obj_score = f1_score(y_true=y,y_pred=y_pred)
+                logging.info(f"aws model score is f1:{obj_score} , accuracy:{accuracy_score(y,y_pred)}")
             else:
                 obj_score = 0
 

@@ -1,6 +1,7 @@
 import os
 import sys
 import pandas as pd
+import numpy as np
 from src.logger import logging
 from src.exception import myexception
 from imblearn.pipeline import pipeline
@@ -18,6 +19,15 @@ class MyModel :
             logging.info("started prediction")
             features = self.preprocessing_obj.transform(dataframe)
             features = self.model_obj.predict(features)
+            logging.info("prediction done sucessfully")
+            return features
+        except Exception as e:
+            raise myexception(e,sys)
+        
+    def prediction_with_array (self , array : np.array) :
+        try:
+            logging.info("started prediction")
+            features = self.model_obj.predict(array)
             logging.info("prediction done sucessfully")
             return features
         except Exception as e:
