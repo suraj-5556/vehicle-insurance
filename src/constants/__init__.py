@@ -3,7 +3,7 @@ from datetime import date
 # constants for src.confrigation.mongo_db_connectivity mongoDB_client
 DB_NAME = "Proj1"
 COLLECTION_NAME = "Proj1-Data"
-CONNECTION_URL = "mongoDB_url"
+CONNECTION_URL = "MONGODB_URL"
 
 """
 Data Ingestion related constant start with DATA_INGESTION VAR NAME
